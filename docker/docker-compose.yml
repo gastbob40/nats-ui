@@ -1,0 +1,37 @@
+services:
+  # NATS Server with JetStream and WebSocket
+  nats:
+    image: nats:2-alpine
+    container_name: nats-server
+    command: ["-c", "/etc/nats/nats.conf"]
+    ports:
+      - "4222:4222"   # NATS client connections
+      - "8222:8222"   # HTTP monitoring API
+      - "9222:9222"   # WebSocket connections
+    volumes:
+      - ./nats.conf:/etc/nats/nats.conf:ro
+      - nats_data:/data
+    restart: unless-stopped
+
+  # NATS UI Application
+  nats-ui:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: ghcr.io/gastbob40/nats-ui:latest
+    container_name: nats-ui
+    ports:
+      - "3000:3000"
+    depends_on:
+      - nats
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    environment:
+      - NODE_ENV=production
+
+volumes:
+  nats_data:
