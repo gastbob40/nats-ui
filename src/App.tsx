@@ -24,6 +24,9 @@ const queryClient = new QueryClient({
   },
 });
 
+// Get the base path from Vite's base configuration
+const basename = import.meta.env.BASE_URL;
+
 function App() {
   return (
     <ThemeProvider
@@ -34,7 +37,7 @@ function App() {
     >
       <QueryClientProvider client={queryClient}>
         <NatsProvider>
-          <Router>
+          <Router basename={basename}>
             <div className="min-h-screen bg-background text-foreground">
               <Routes>
                 <Route path="/" element={<MainLayout />}>
