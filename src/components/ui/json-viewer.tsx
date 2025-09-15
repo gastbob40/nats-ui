@@ -14,9 +14,10 @@ interface JsonNodeProps {
   value: unknown;
   depth?: number;
   defaultExpanded?: boolean;
+  isLast?: boolean;
 }
 
-function JsonNode({ keyName, value, depth = 0, defaultExpanded = false }: JsonNodeProps) {
+function JsonNode({ keyName, value, depth = 0, defaultExpanded = false, isLast = false }: JsonNodeProps) {
   const [isExpanded, setIsExpanded] = useState(depth === 0 ? defaultExpanded : false);
   
   const isObject = value !== null && typeof value === 'object' && !Array.isArray(value);
@@ -41,6 +42,7 @@ function JsonNode({ keyName, value, depth = 0, defaultExpanded = false }: JsonNo
         )}>
           {typeof value === 'string' ? `"${value}"` : String(value)}
         </span>
+        {!isLast && <span className="text-muted-foreground">,</span>}
       </div>
     );
   }
@@ -80,27 +82,31 @@ function JsonNode({ keyName, value, depth = 0, defaultExpanded = false }: JsonNo
         <div>
           {isArray ? (
             value.map((item, index) => (
-              <JsonNode 
-                key={index} 
-                keyName={String(index)} 
-                value={item} 
+              <JsonNode
+                key={index}
+                keyName={String(index)}
+                value={item}
                 depth={depth + 1}
                 defaultExpanded={defaultExpanded}
+                isLast={index === value.length - 1}
               />
             ))
           ) : (
-            Object.entries(value).map(([key, val]) => (
-              <JsonNode 
-                key={key} 
-                keyName={key} 
-                value={val} 
+            Object.entries(value).map(([key, val], index, arr) => (
+              <JsonNode
+                key={key}
+                keyName={key}
+                value={val}
                 depth={depth + 1}
                 defaultExpanded={defaultExpanded}
+                isLast={index === arr.length - 1}
               />
             ))
           )}
-          <div style={{ paddingLeft: `${indent}px` }}>
+          <div className="flex items-start" style={{ paddingLeft: `${indent}px` }}>
+            <div className="w-5 mr-1" />
             <span className="text-muted-foreground">{isArray ? ']' : '}'}</span>
+            {!isLast && <span className="text-muted-foreground">,</span>}
           </div>
         </div>
       )}
@@ -132,7 +138,7 @@ export function JsonViewer({ data, defaultExpanded = false, className }: JsonVie
   
   return (
     <div className={cn("text-sm bg-muted p-2 rounded overflow-x-auto font-mono", className)}>
-      <JsonNode value={parsedData} defaultExpanded={defaultExpanded} />
+      <JsonNode value={parsedData} defaultExpanded={defaultExpanded} isLast={true} />
     </div>
   );
 }
