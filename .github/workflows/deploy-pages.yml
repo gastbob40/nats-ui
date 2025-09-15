@@ -39,6 +39,7 @@ jobs:
         run: pnpm build
         env:
           VITE_BASE_PATH: /nats-ui/
+          VITE_ROUTER_TYPE: hash
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
