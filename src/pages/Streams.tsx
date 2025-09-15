@@ -126,23 +126,41 @@ export function Streams() {
   });
 
   // Fetch streams from JetStream
-  const fetchStreams = useCallback(async () => {
+  const fetchStreams = useCallback(async (isInitialLoad = false) => {
     if (!isConnected || !connection) return;
-    
-    setLoading(true);
+
+    // Only show loading on initial load
+    if (isInitialLoad) {
+      setLoading(true);
+    }
+
     try {
       // Try to use JetStream API first, then fallback to HTTP monitoring API
       let streamsData: Record<string, unknown>[] = [];
-      
+
       try {
         streamsData = await connection.jetstream.listStreams();
       } catch (jsError) {
         console.warn('JetStream API not available, using HTTP monitoring API', jsError);
         streamsData = await fetchJetStreamStreams();
       }
-      
+
       const convertedStreams = streamsData.map(convertJetStreamData);
-      setStreams(convertedStreams);
+
+      // Only update state if data has actually changed
+      setStreams((prevStreams) => {
+        // Check if streams have changed by comparing names and key properties
+        const hasChanged = prevStreams.length !== convertedStreams.length ||
+          !prevStreams.every((prevStream, index) => {
+            const newStream = convertedStreams[index];
+            return prevStream.name === newStream?.name &&
+              prevStream.messages === newStream?.messages &&
+              prevStream.bytes === newStream?.bytes &&
+              prevStream.consumers === newStream?.consumers;
+          });
+
+        return hasChanged ? convertedStreams : prevStreams;
+      });
     } catch (error) {
       console.error('Failed to fetch streams:', error);
       // Only show error if JetStream is expected to be available
@@ -150,7 +168,9 @@ export function Streams() {
         toast.error('Failed to fetch streams');
       }
     } finally {
-      setLoading(false);
+      if (isInitialLoad) {
+        setLoading(false);
+      }
     }
   }, [isConnected, connection]);
 
@@ -225,11 +245,11 @@ export function Streams() {
 
   // Load streams on mount and when connection changes
   useEffect(() => {
-    fetchStreams();
-    
+    fetchStreams(true); // Initial load with loading state
+
     // Refresh streams every 10 seconds when connected
     if (isConnected) {
-      const interval = setInterval(fetchStreams, 10000);
+      const interval = setInterval(() => fetchStreams(false), 10000); // Background refresh without loading
       return () => clearInterval(interval);
     }
   }, [isConnected, fetchStreams]);
