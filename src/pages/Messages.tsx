@@ -16,6 +16,8 @@ import {
   ChevronRight,
   RefreshCw,
   MoreVertical,
+  Inbox,
+  MailX,
 } from 'lucide-react';
 
 import {cn } from '@/lib/utils';
@@ -42,6 +44,8 @@ import { toast } from 'sonner';
 import { fetchActiveSubjects } from '../services/nats-service';
 import { subjectTracker, type SubjectActivity } from '../services/subject-tracker';
 import { TopicSkeleton } from '../components/ui/skeletons';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/dialog';
+import { Input } from '../components/ui/input';
 
 const publishSchema = z.object({
   subject: z.string().min(1, 'Subject is required'),
@@ -213,7 +217,10 @@ const MessagesComponent = function Messages() {
   const [topics, setTopics] = useState<string[]>([]);
   const [isLoadingTopics, setIsLoadingTopics] = useState(false);
   const [expandedHeaders, setExpandedHeaders] = useState<Set<string>>(new Set());
-  
+  const [hideInboxTopics, setHideInboxTopics] = useState(true);
+  const [isAddTopicOpen, setIsAddTopicOpen] = useState(false);
+  const [newTopicName, setNewTopicName] = useState('');
+
   // State for publish card collapsible behavior
   const [isPublishExpanded, setIsPublishExpanded] = useState(() => {
     // Default to collapsed on smaller screens, expanded on larger screens
@@ -236,12 +243,17 @@ const MessagesComponent = function Messages() {
   const topicListData = useMemo(() => {
     const selectedTopicRef = selectedTopic;
     const subscriptionsRef = subscriptions;
-    
-    return topics.map((topic) => {
+
+    // Filter out _INBOX topics if hideInboxTopics is true
+    const filteredTopics = hideInboxTopics
+      ? topics.filter(topic => !topic.startsWith('_INBOX.'))
+      : topics;
+
+    return filteredTopics.map((topic) => {
       const activity = subjectActivities.get(topic);
       const isSelected = selectedTopicRef === topic;
       const isSubscribed = subscriptionsRef.some(s => s.subject === topic && s.isActive);
-      
+
       return {
         topic,
         activity,
@@ -249,7 +261,7 @@ const MessagesComponent = function Messages() {
         isSubscribed
       };
     });
-  }, [topics, subjectActivities, selectedTopic, subscriptions]);
+  }, [topics, subjectActivities, selectedTopic, subscriptions, hideInboxTopics]);
   
   // Memoized topic list component to prevent re-renders
   const TopicListMemoized = useMemo(() => {
@@ -539,7 +551,7 @@ const MessagesComponent = function Messages() {
     } finally {
       setIsLoadingTopics(false);
     }
-  }, [isConnected, fetchServerTopics, createTopicsHash]);
+  }, [isConnected, fetchServerTopics]);
 
   // Smart polling with different intervals for different sources
   useEffect(() => {
@@ -568,7 +580,7 @@ const MessagesComponent = function Messages() {
     }, 30000);
     
     return () => clearInterval(serverInterval);
-  }, [isConnected, fetchServerTopics, createTopicsHash, fetchTopics]);
+  }, [isConnected, fetchServerTopics, createTopicsHash]);
 
   // Handle responsive collapse state for publish card
   useEffect(() => {
@@ -686,9 +698,17 @@ const MessagesComponent = function Messages() {
               <CardTitle className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <MessageSquare className="h-5 w-5" />
-                  Topics ({topics.length})
+                  Topics ({topicListData.length})
                 </div>
                 <div className="flex gap-1">
+                  <Button
+                    variant={hideInboxTopics ? "outline" : "default"}
+                    size="sm"
+                    onClick={() => setHideInboxTopics(!hideInboxTopics)}
+                    title={hideInboxTopics ? "Show _INBOX topics" : "Hide _INBOX topics"}
+                  >
+                    {hideInboxTopics ? <MailX className="h-4 w-4" /> : <Inbox className="h-4 w-4" />}
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"
@@ -698,12 +718,12 @@ const MessagesComponent = function Messages() {
                         // Force fresh fetch from NATS server
                         const freshServerTopics = await fetchActiveSubjects();
                         const subjectTrackerTopics = subjectTracker.getSubjects().map(s => s.subject);
-                        
+
                         // Combine and update
                         const allTopicsSet = new Set([...freshServerTopics, ...subjectTrackerTopics]);
                         const newTopics = Array.from(allTopicsSet).sort();
                         setTopics(newTopics);
-                        
+
                         toast.success('Topics refreshed from NATS server');
                       } catch (error) {
                         console.error('Failed to refresh topics:', error);
@@ -721,11 +741,8 @@ const MessagesComponent = function Messages() {
                     variant="outline"
                     size="sm"
                     onClick={() => {
-                      const topicName = prompt('Enter topic name:');
-                      if (topicName?.trim()) {
-                        setTopics(prev => [...new Set([...prev, topicName.trim()])].sort());
-                        setSelectedTopic(topicName.trim());
-                      }
+                      setIsAddTopicOpen(true);
+                      setNewTopicName('');
                     }}
                     title="Add custom topic"
                   >
@@ -984,6 +1001,61 @@ const MessagesComponent = function Messages() {
           )}
         </div>
       </div>
+
+      {/* Add Topic Modal */}
+      <Dialog open={isAddTopicOpen} onOpenChange={setIsAddTopicOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add Custom Topic</DialogTitle>
+            <DialogDescription>
+              Enter a topic name to add it to the list.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="topic-name">Topic Name</Label>
+              <Input
+                id="topic-name"
+                placeholder="e.g., orders.created"
+                value={newTopicName}
+                onChange={(e) => setNewTopicName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && newTopicName.trim()) {
+                    setTopics(prev => [...new Set([...prev, newTopicName.trim()])].sort());
+                    setSelectedTopic(newTopicName.trim());
+                    setIsAddTopicOpen(false);
+                    setNewTopicName('');
+                  }
+                }}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsAddTopicOpen(false);
+                setNewTopicName('');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                if (newTopicName.trim()) {
+                  setTopics(prev => [...new Set([...prev, newTopicName.trim()])].sort());
+                  setSelectedTopic(newTopicName.trim());
+                  setIsAddTopicOpen(false);
+                  setNewTopicName('');
+                }
+              }}
+              disabled={!newTopicName.trim()}
+            >
+              Add Topic
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
