@@ -25,22 +25,27 @@ class RealNatsService implements NatsService {
   async publish(subject: string, data: unknown, msgHeaders?: Record<string, string>): Promise<void> {
     const payload = typeof data === 'string' ? data : JSON.stringify(data);
     const encodedData = new TextEncoder().encode(payload);
-    
-    
-    // Create headers if provided
-    const options: { headers?: MsgHdrs } = {};
-    if (msgHeaders && Object.keys(msgHeaders).length > 0) {
-      const h = createHeaders();
-      for (const [key, value] of Object.entries(msgHeaders)) {
-        h.append(key, value);
+
+    try {
+      // Create headers if provided
+      const options: { headers?: MsgHdrs } = {};
+      if (msgHeaders && Object.keys(msgHeaders).length > 0) {
+        const h = createHeaders();
+        for (const [key, value] of Object.entries(msgHeaders)) {
+          h.append(key, value);
+        }
+        options.headers = h;
       }
-      options.headers = h;
+
+      // Publish the message - this is synchronous but can throw
+      this.connection.publish(subject, encodedData, options);
+
+      // Track published subject after successful publish
+      subjectTracker.track(subject, payload);
+    } catch (error) {
+      console.error(`Failed to publish to subject ${subject}:`, error);
+      throw error;
     }
-    
-    this.connection.publish(subject, encodedData, options);
-    
-    // Track published subject
-    subjectTracker.track(subject, payload);
   }
 
   async subscribe(subject: string, callback: (msg: { subject: string; data: unknown; headers?: Record<string, string>; timestamp: number; reply?: string }) => void): Promise<() => void> {

@@ -48,7 +48,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Input } from '../components/ui/input';
 
 const publishSchema = z.object({
-  subject: z.string().min(1, 'Subject is required'),
   data: z.string(),
   headers: z.string().optional(),
 });
@@ -315,7 +314,6 @@ const MessagesComponent = function Messages() {
   const publishForm = useForm<PublishFormData>({
     resolver: zodResolver(publishSchema),
     defaultValues: {
-      subject: '',
       data: '',
       headers: '',
     },
@@ -329,7 +327,7 @@ const MessagesComponent = function Messages() {
     },
   });
 
-  const handlePublish = useCallback(async (data: PublishFormData) => {
+  const handlePublish = useCallback(async (data: PublishFormData & { subject: string }) => {
     if (!connection) {
       toast.error('Not connected to NATS server');
       return;
@@ -337,7 +335,7 @@ const MessagesComponent = function Messages() {
 
     try {
       let headers: Record<string, string> | undefined;
-      
+
       // Parse headers if provided
       if (data.headers?.trim()) {
         try {
@@ -816,10 +814,10 @@ const MessagesComponent = function Messages() {
                   
                   <CollapsibleContent>
                     <CardContent>
-                      <form 
-                        onSubmit={publishForm.handleSubmit((data) => {
-                          handlePublish({ ...data, subject: selectedTopic });
-                        })} 
+                      <form
+                        onSubmit={publishForm.handleSubmit(async (data) => {
+                          await handlePublish({ ...data, subject: selectedTopic });
+                        })}
                         className="space-y-4"
                         autoComplete="off"
                         data-form-type="other"
