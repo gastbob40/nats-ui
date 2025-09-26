@@ -200,7 +200,7 @@ export function MainLayout() {
           <SidebarFooter className="border-t border-sidebar-border">
             <div className="flex items-center justify-between p-2 group-data-[collapsible=icon]:justify-center">
               <Badge variant="outline" className="text-xs group-data-[collapsible=icon]:hidden">
-                v1.0.0
+                v{__APP_VERSION__}
               </Badge>
               <Button
                 variant="ghost"
