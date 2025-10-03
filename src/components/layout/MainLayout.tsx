@@ -1,4 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { useTheme } from 'next-themes';
 import {
   Database,
@@ -11,6 +12,7 @@ import {
   Sun,
   Monitor,
 } from 'lucide-react';
+import { iconSpring } from '@/lib/animations';
 
 import {
   Sidebar,
@@ -150,14 +152,26 @@ export function MainLayout() {
           <SidebarHeader className="border-b border-sidebar-border">
             <div className="flex items-center gap-2 px-4 py-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2">
               <div className="flex items-center gap-2">
-                <div className="rounded-lg bg-primary p-2">
+                <motion.div
+                  className="rounded-lg bg-primary p-2"
+                  whileHover={{ scale: 1.05, rotate: 3 }}
+                  transition={iconSpring}
+                >
                   <Database className="h-4 w-4 text-primary-foreground" />
-                </div>
+                </motion.div>
                 <div className="flex flex-col group-data-[collapsible=icon]:hidden">
                   <h1 className="text-sm font-semibold">NATS UI</h1>
                   <div className="flex items-center gap-2">
-                    <div
+                    <motion.div
                       className={`h-2 w-2 rounded-full ${getStatusColor(status)}`}
+                      animate={status === 'connected' ? {
+                        scale: [1, 1.1, 1],
+                        transition: {
+                          duration: 2,
+                          repeat: Infinity,
+                          ease: [0.4, 0.0, 0.2, 1]
+                        }
+                      } : {}}
                     />
                     <span className="text-xs text-muted-foreground">
                       {getStatusText(status)}
@@ -184,10 +198,20 @@ export function MainLayout() {
                           isActive={isActive}
                           tooltip={item.title}
                         >
-                          <Link to={item.path}>
-                            <Icon className="h-4 w-4" />
-                            <span>{item.title}</span>
-                          </Link>
+                          <motion.div whileHover="hover" className="flex items-center gap-2">
+                            <Link to={item.path} className="flex items-center gap-2 w-full">
+                              <motion.div
+                                variants={{
+                                  hover: { scale: 1.1, rotate: 3 }
+                                }}
+                                transition={iconSpring}
+                                className="flex items-center justify-center"
+                              >
+                                <Icon className="h-4 w-4" />
+                              </motion.div>
+                              <span>{item.title}</span>
+                            </Link>
+                          </motion.div>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     );
@@ -209,7 +233,15 @@ export function MainLayout() {
                 className="h-8 w-8"
                 title={getThemeTooltip()}
               >
-                {getThemeIcon()}
+                <motion.div
+                  key={theme}
+                  initial={{ rotate: -180, opacity: 0 }}
+                  animate={{ rotate: 0, opacity: 1 }}
+                  exit={{ rotate: 180, opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {getThemeIcon()}
+                </motion.div>
                 <span className="sr-only">Cycle theme</span>
               </Button>
             </div>

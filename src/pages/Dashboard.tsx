@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { motion, useSpring, useTransform } from 'framer-motion';
 import {
   Activity,
   Database,
@@ -17,6 +18,7 @@ import { ConnectionStatus } from '../components/connection/ConnectionManager';
 import { useNats } from '../hooks/useNats';
 import { fetchNatsInfo, fetchNatsConnections, fetchJetStreamInfo } from '../services/nats-service';
 import { MetricCardSkeleton } from '../components/ui/skeletons';
+import { staggerContainer, staggerItem, iconSpring, easings } from '../lib/animations';
 
 interface MetricCardProps {
   title: string;
@@ -30,27 +32,59 @@ interface MetricCardProps {
 }
 
 function MetricCard({ title, value, description, icon, trend }: MetricCardProps) {
+  // Animated counter for numeric values
+  const isNumeric = typeof value === 'number';
+  const numericValue = isNumeric ? value : 0;
+  const springValue = useSpring(numericValue, { stiffness: 100, damping: 30 });
+  const display = useTransform(springValue, (latest) => Math.floor(latest).toLocaleString());
+
+  useEffect(() => {
+    if (isNumeric) {
+      springValue.set(numericValue);
+    }
+  }, [numericValue, springValue, isNumeric]);
+
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        {icon}
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
-        {description && (
-          <p className="text-xs text-muted-foreground mt-1">{description}</p>
-        )}
-        {trend && (
-          <div className="flex items-center mt-1">
-            <TrendingUp className={`h-4 w-4 ${trend.isPositive ? 'text-green-500' : 'text-red-500'}`} />
-            <span className={`text-xs ml-1 ${trend.isPositive ? 'text-green-500' : 'text-red-500'}`}>
-              {trend.isPositive ? '+' : ''}{trend.value}%
-            </span>
+    <motion.div
+      variants={staggerItem}
+      initial="hidden"
+      animate="visible"
+      whileHover={{ y: -2, transition: { duration: 0.15, ease: easings.easeOut } }}
+      style={{ cursor: 'default' }}
+    >
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardTitle className="text-sm font-medium">{title}</CardTitle>
+          <motion.div
+            whileHover={{ scale: 1.15, rotate: 5 }}
+            transition={iconSpring}
+          >
+            {icon}
+          </motion.div>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-bold">
+            {isNumeric ? <motion.span>{display}</motion.span> : value}
           </div>
-        )}
-      </CardContent>
-    </Card>
+          {description && (
+            <p className="text-xs text-muted-foreground mt-1">{description}</p>
+          )}
+          {trend && (
+            <motion.div
+              className="flex items-center mt-1"
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              <TrendingUp className={`h-4 w-4 ${trend.isPositive ? 'text-green-500' : 'text-red-500'}`} />
+              <span className={`text-xs ml-1 ${trend.isPositive ? 'text-green-500' : 'text-red-500'}`}>
+                {trend.isPositive ? '+' : ''}{trend.value}%
+              </span>
+            </motion.div>
+          )}
+        </CardContent>
+      </Card>
+    </motion.div>
   );
 }
 
@@ -288,36 +322,69 @@ export default function Dashboard() {
       </div>
 
       {/* Connection Status */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5" />
-            Connection Status
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-muted-foreground">Server</p>
-              <p className="text-lg font-semibold">{config.server}</p>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3 }}
+      >
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <motion.div
+                animate={status === 'connected' ? {
+                  scale: [1, 1.08, 1],
+                  transition: {
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: easings.standard
+                  }
+                } : {}}
+              >
+                <Activity className="h-5 w-5" />
+              </motion.div>
+              Connection Status
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">Server</p>
+                <p className="text-lg font-semibold">{config.server}</p>
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-muted-foreground">Status</p>
+                <motion.div
+                  initial={{ scale: 0.9 }}
+                  animate={{ scale: 1 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <Badge variant={status === 'connected' ? 'default' : 'destructive'}>
+                    {status}
+                  </Badge>
+                </motion.div>
+              </div>
             </div>
-            <div className="text-right">
-              <p className="text-sm text-muted-foreground">Status</p>
-              <Badge variant={status === 'connected' ? 'default' : 'destructive'}>
-                {status}
-              </Badge>
-            </div>
-          </div>
-          {error && (
-            <div className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-md">
-              <p className="text-sm text-destructive">{error}</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+            {error && (
+              <motion.div
+                className="mt-4 p-3 bg-destructive/10 border border-destructive/20 rounded-md"
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+              >
+                <p className="text-sm text-destructive">{error}</p>
+              </motion.div>
+            )}
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Metrics Grid */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <motion.div
+        className="grid gap-4 md:grid-cols-2 lg:grid-cols-4"
+        variants={staggerContainer}
+        initial="hidden"
+        animate="visible"
+      >
         {initialLoading && loading ? (
           <>
             <MetricCardSkeleton />
@@ -341,7 +408,7 @@ export default function Dashboard() {
             />
             <MetricCard
               title="Messages Processed"
-              value={metrics.messages.toLocaleString()}
+              value={metrics.messages}
               description="Total messages processed"
               icon={<Zap className="h-4 w-4 text-muted-foreground" />}
             />
@@ -353,7 +420,7 @@ export default function Dashboard() {
             />
           </>
         )}
-      </div>
+      </motion.div>
 
       {/* Data Transfer */}
       <div className="grid gap-4 md:grid-cols-2">

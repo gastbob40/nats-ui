@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo, memo, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -21,6 +22,7 @@ import {
 } from 'lucide-react';
 
 import {cn } from '@/lib/utils';
+import { staggerContainer, staggerItem } from '@/lib/animations';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -96,7 +98,14 @@ const MessageItem = memo(({
   }, [onToggleHeader, message.id]);
 
   return (
-    <div className="rounded-lg border p-4 space-y-3">
+    <motion.div
+      layout
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 20 }}
+      transition={{ duration: 0.3 }}
+      className="rounded-lg border p-4 space-y-3"
+    >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Badge variant="outline">{message.subject}</Badge>
@@ -143,26 +152,37 @@ const MessageItem = memo(({
             onClick={handleToggleHeader}
           >
             <div className="flex items-center gap-1">
-              {isHeaderExpanded ? (
-                <ChevronDown className="h-3 w-3" />
-              ) : (
+              <motion.div
+                animate={{ rotate: isHeaderExpanded ? 90 : 0 }}
+                transition={{ duration: 0.2 }}
+              >
                 <ChevronRight className="h-3 w-3" />
-              )}
+              </motion.div>
               <Label className="text-xs font-medium cursor-pointer">
                 Headers ({Object.keys(message.headers).length})
               </Label>
             </div>
           </Button>
-          {isHeaderExpanded && (
-            <div className="mt-2 text-sm bg-muted p-2 rounded font-mono space-y-1">
-              {Object.entries(message.headers).map(([key, value]) => (
-                <div key={key} className="flex gap-2">
-                  <span className="text-blue-600 dark:text-blue-400">{key}:</span>
-                  <span className="text-muted-foreground">{value}</span>
+          <AnimatePresence>
+            {isHeaderExpanded && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <div className="mt-2 text-sm bg-muted p-2 rounded font-mono space-y-1">
+                  {Object.entries(message.headers).map(([key, value]) => (
+                    <div key={key} className="flex gap-2">
+                      <span className="text-blue-600 dark:text-blue-400">{key}:</span>
+                      <span className="text-muted-foreground">{value}</span>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       )}
 
@@ -185,7 +205,7 @@ const MessageItem = memo(({
           <span className="text-sm text-muted-foreground font-mono">{message.replyTo}</span>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 });
 
@@ -279,11 +299,18 @@ const MessagesComponent = function Messages() {
     }
     
     return (
-      <div className="space-y-2">
+      <motion.div
+        className="space-y-2"
+        variants={staggerContainer}
+        initial="hidden"
+        animate="visible"
+      >
         {topicListData.map(({ topic, activity, isSelected, isSubscribed }) => {
           return (
-            <div
+            <motion.div
               key={topic}
+              variants={staggerItem}
+              whileHover={{ x: 4, transition: { duration: 0.2 } }}
               className={`cursor-pointer rounded-lg border p-3 transition-colors ${
                 isSelected ? 'bg-primary/10 border-primary' : 'hover:bg-muted/50'
               }`}
@@ -291,11 +318,20 @@ const MessagesComponent = function Messages() {
             >
               <div className="flex items-center justify-between mb-1">
                 <span className="font-mono text-sm truncate">{topic}</span>
-                {isSubscribed && (
-                  <Badge variant="default" className="text-xs">
-                    Subscribed
-                  </Badge>
-                )}
+                <AnimatePresence>
+                  {isSubscribed && (
+                    <motion.div
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      exit={{ scale: 0, opacity: 0 }}
+                      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                    >
+                      <Badge variant="default" className="text-xs">
+                        Subscribed
+                      </Badge>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
               {activity && (
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -304,10 +340,10 @@ const MessagesComponent = function Messages() {
                   <span>{new Date(activity.lastSeen).toLocaleTimeString()}</span>
                 </div>
               )}
-            </div>
+            </motion.div>
           );
         })}
-      </div>
+      </motion.div>
     );
   }, [topics, topicListData, isLoadingTopics, setSelectedTopic]);
 
@@ -549,7 +585,7 @@ const MessagesComponent = function Messages() {
     } finally {
       setIsLoadingTopics(false);
     }
-  }, [isConnected, fetchServerTopics]);
+  }, [isConnected, fetchServerTopics, createTopicsHash]);
 
   // Smart polling with different intervals for different sources
   useEffect(() => {
@@ -578,7 +614,7 @@ const MessagesComponent = function Messages() {
     }, 30000);
     
     return () => clearInterval(serverInterval);
-  }, [isConnected, fetchServerTopics, createTopicsHash]);
+  }, [isConnected, fetchServerTopics, createTopicsHash, fetchTopics]);
 
   // Handle responsive collapse state for publish card
   useEffect(() => {
@@ -978,19 +1014,26 @@ const MessagesComponent = function Messages() {
                         </div>
                       </div>
                     ) : (
-                      <div className="space-y-4">
-                        {filteredMessages.map((message) => (
-                          <MessageItem
-                            key={message.id}
-                            message={message}
-                            isHeaderExpanded={expandedHeaders.has(message.id)}
-                            onToggleHeader={toggleHeaderExpansion}
-                            onCopyBody={copyMessageBody}
-                            onCopyHeaders={copyMessageHeaders}
-                            onCopyAll={copyMessageAll}
-                          />
-                        ))}
-                      </div>
+                      <motion.div
+                        className="space-y-4"
+                        variants={staggerContainer}
+                        initial="hidden"
+                        animate="visible"
+                      >
+                        <AnimatePresence mode="popLayout">
+                          {filteredMessages.map((message) => (
+                            <MessageItem
+                              key={message.id}
+                              message={message}
+                              isHeaderExpanded={expandedHeaders.has(message.id)}
+                              onToggleHeader={toggleHeaderExpansion}
+                              onCopyBody={copyMessageBody}
+                              onCopyHeaders={copyMessageHeaders}
+                              onCopyAll={copyMessageAll}
+                            />
+                          ))}
+                        </AnimatePresence>
+                      </motion.div>
                     )}
                   </div>
                 </CardContent>

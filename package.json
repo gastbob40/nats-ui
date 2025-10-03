@@ -1,7 +1,7 @@
 {
   "name": "nats-ui",
   "private": true,
-  "version": "0.1.6",
+  "version": "0.1.7",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -29,6 +29,7 @@
     "@tanstack/react-table": "^8.21.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "framer-motion": "^12.23.22",
     "lucide-react": "^0.542.0",
     "nats.ws": "^1.30.3",
     "next-themes": "^0.4.6",
