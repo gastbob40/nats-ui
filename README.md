@@ -1,4 +1,4 @@
-# NATS UI
+# NATS UI - Web interface for NATS JetStream monitoring and management
 
 > **The missing GUI for NATS.io** — Monitor messages, manage JetStream, control KV stores, all from your browser.
 
