@@ -11,6 +11,7 @@ import {
   Moon,
   Sun,
   Monitor,
+  Github,
 } from 'lucide-react';
 import { iconSpring } from '@/lib/animations';
 
@@ -226,24 +227,41 @@ export function MainLayout() {
               <Badge variant="outline" className="text-xs group-data-[collapsible=icon]:hidden">
                 v{__APP_VERSION__}
               </Badge>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={cycleTheme}
-                className="h-8 w-8"
-                title={getThemeTooltip()}
-              >
-                <motion.div
-                  key={theme}
-                  initial={{ rotate: -180, opacity: 0 }}
-                  animate={{ rotate: 0, opacity: 1 }}
-                  exit={{ rotate: 180, opacity: 0 }}
-                  transition={{ duration: 0.3 }}
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => window.open('https://github.com/gastbob40/nats-ui', '_blank')}
+                  className="h-8 w-8"
+                  title="View on GitHub"
                 >
-                  {getThemeIcon()}
-                </motion.div>
-                <span className="sr-only">Cycle theme</span>
-              </Button>
+                  <motion.div
+                    whileHover={{ scale: 1.1, rotate: 3 }}
+                    transition={iconSpring}
+                  >
+                    <Github className="h-4 w-4" />
+                  </motion.div>
+                  <span className="sr-only">View on GitHub</span>
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={cycleTheme}
+                  className="h-8 w-8"
+                  title={getThemeTooltip()}
+                >
+                  <motion.div
+                    key={theme}
+                    initial={{ rotate: -180, opacity: 0 }}
+                    animate={{ rotate: 0, opacity: 1 }}
+                    exit={{ rotate: 180, opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    {getThemeIcon()}
+                  </motion.div>
+                  <span className="sr-only">Cycle theme</span>
+                </Button>
+              </div>
             </div>
           </SidebarFooter>
         </Sidebar>
