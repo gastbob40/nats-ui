@@ -22,7 +22,7 @@ import {
 } from 'lucide-react';
 
 import {cn } from '@/lib/utils';
-import { staggerContainer, staggerItem } from '@/lib/animations';
+import { staggerContainer } from '@/lib/animations';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -307,10 +307,8 @@ const MessagesComponent = function Messages() {
       >
         {topicListData.map(({ topic, activity, isSelected, isSubscribed }) => {
           return (
-            <motion.div
+            <div
               key={topic}
-              variants={staggerItem}
-              whileHover={{ x: 4, transition: { duration: 0.2 } }}
               className={`cursor-pointer rounded-lg border p-3 transition-colors ${
                 isSelected ? 'bg-primary/10 border-primary' : 'hover:bg-muted/50'
               }`}
@@ -340,7 +338,7 @@ const MessagesComponent = function Messages() {
                   <span>{new Date(activity.lastSeen).toLocaleTimeString()}</span>
                 </div>
               )}
-            </motion.div>
+            </div>
           );
         })}
       </motion.div>
