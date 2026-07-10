@@ -25,6 +25,7 @@ import { useNats } from '../hooks/useNats';
 import { toast } from 'sonner';
 import { fetchJetStreamStreams } from '../services/nats-service';
 import { TableRowSkeleton } from '../components/ui/skeletons';
+import { loadJSON, saveJSON } from '@/lib/storage';
 
 const createStreamSchema = z.object({
   name: z.string().min(1, 'Stream name is required').regex(/^[a-zA-Z0-9_-]+$/, 'Invalid stream name'),
@@ -100,8 +101,29 @@ function formatDuration(ms: number): string {
   return `${seconds}s`;
 }
 
+// Remember which stream's details dialog was open, per server, so it can be
+// restored after a page reload. The streams themselves live on the server.
+const SELECTED_STREAM_KEY = 'nats-ui-selected-stream';
+
+function getStoredSelectedStream(server: string): string | null {
+  if (!server) return null;
+  return loadJSON<Record<string, string>>(SELECTED_STREAM_KEY, {})[server] ?? null;
+}
+
+function setStoredSelectedStream(server: string, name: string | null): void {
+  if (!server) return;
+  const all = loadJSON<Record<string, string>>(SELECTED_STREAM_KEY, {});
+  if (name) {
+    all[server] = name;
+  } else {
+    delete all[server];
+  }
+  saveJSON(SELECTED_STREAM_KEY, all);
+}
+
 export function Streams() {
-  const { connection, isConnected } = useNats();
+  const { connection, isConnected, config } = useNats();
+  const server = config.server;
   const [streams, setStreams] = useState<StreamInfo[]>([]);
   const [selectedStream, setSelectedStream] = useState<StreamInfo | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -109,6 +131,13 @@ export function Streams() {
   const [streamToDelete, setStreamToDelete] = useState<string | null>(null);
   const [showBlur, setShowBlur] = useState(false);
   const tableContainerRef = useRef<HTMLDivElement>(null);
+  const hasRestoredSelectionRef = useRef(false);
+
+  // Persist the opened stream so its details dialog reopens after a reload.
+  const selectStream = useCallback((stream: StreamInfo | null) => {
+    setSelectedStream(stream);
+    setStoredSelectedStream(server, stream?.name ?? null);
+  }, [server]);
 
   const form = useForm<CreateStreamFormData>({
     resolver: zodResolver(createStreamSchema),
@@ -161,6 +190,8 @@ export function Streams() {
 
         return hasChanged ? convertedStreams : prevStreams;
       });
+
+      return convertedStreams;
     } catch (error) {
       console.error('Failed to fetch streams:', error);
       // Only show error if JetStream is expected to be available
@@ -245,7 +276,19 @@ export function Streams() {
 
   // Load streams on mount and when connection changes
   useEffect(() => {
-    const run = async () => { await fetchStreams(true); }; // Initial load with loading state
+    const run = async () => {
+      const loaded = await fetchStreams(true); // Initial load with loading state
+
+      // Restore the previously opened stream once, after the first load.
+      if (loaded && !hasRestoredSelectionRef.current && loaded.length > 0) {
+        hasRestoredSelectionRef.current = true;
+        const storedName = getStoredSelectedStream(server);
+        if (storedName) {
+          const match = loaded.find((s) => s.name === storedName);
+          if (match) setSelectedStream(match);
+        }
+      }
+    };
     run();
 
     // Refresh streams every 10 seconds when connected
@@ -253,7 +296,12 @@ export function Streams() {
       const interval = setInterval(() => fetchStreams(false), 10000); // Background refresh without loading
       return () => clearInterval(interval);
     }
-  }, [isConnected, fetchStreams]);
+  }, [isConnected, fetchStreams, server]);
+
+  // Reset the restore guard when switching servers.
+  useEffect(() => {
+    hasRestoredSelectionRef.current = false;
+  }, [server]);
 
   // Check blur when streams change
   useEffect(() => {
@@ -547,7 +595,7 @@ export function Streams() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => setSelectedStream(stream)}
+                          onClick={() => selectStream(stream)}
                         >
                           <Info className="h-4 w-4" />
                         </Button>
@@ -607,7 +655,7 @@ export function Streams() {
 
       {/* Stream Details Dialog */}
       {selectedStream && (
-        <Dialog open={!!selectedStream} onOpenChange={() => setSelectedStream(null)}>
+        <Dialog open={!!selectedStream} onOpenChange={() => selectStream(null)}>
           <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">

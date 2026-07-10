@@ -19,6 +19,7 @@ import {
   MoreVertical,
   Inbox,
   MailX,
+  X,
 } from 'lucide-react';
 
 import {cn } from '@/lib/utils';
@@ -45,6 +46,7 @@ import { useNats } from '../hooks/useNats';
 import { toast } from 'sonner';
 import { fetchActiveSubjects } from '../services/nats-service';
 import { subjectTracker, type SubjectActivity } from '../services/subject-tracker';
+import { getCustomTopics, addCustomTopic, removeCustomTopic } from '../services/custom-topics';
 import { TopicSkeleton } from '../components/ui/skeletons';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '../components/ui/dialog';
 import { Input } from '../components/ui/input';
@@ -229,7 +231,8 @@ interface Subscription {
 
 
 const MessagesComponent = function Messages() {
-  const { connection, isConnected } = useNats();
+  const { connection, isConnected, config } = useNats();
+  const server = config.server;
   const [messages, setMessages] = useState<Message[]>([]);
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
@@ -239,6 +242,47 @@ const MessagesComponent = function Messages() {
   const [hideInboxTopics, setHideInboxTopics] = useState(true);
   const [isAddTopicOpen, setIsAddTopicOpen] = useState(false);
   const [newTopicName, setNewTopicName] = useState('');
+
+  // User-added topics, persisted per server so they survive a page reload.
+  // Lazily seeded from localStorage so the list is correct on first paint.
+  const [customTopics, setCustomTopics] = useState<string[]>(() => getCustomTopics(server));
+  const [loadedTopicsServer, setLoadedTopicsServer] = useState(server);
+  const customTopicsRef = useRef<string[]>(customTopics);
+  const customTopicsSet = useMemo(() => new Set(customTopics), [customTopics]);
+
+  // Reload persisted custom topics when the active server changes.
+  if (server !== loadedTopicsServer) {
+    setLoadedTopicsServer(server);
+    setCustomTopics(getCustomTopics(server));
+  }
+
+  // Mirror the latest custom topics into a ref so polling closures can read them.
+  useEffect(() => {
+    customTopicsRef.current = customTopics;
+  }, [customTopics]);
+
+  const handleAddCustomTopic = useCallback((name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+
+    setCustomTopics(addCustomTopic(server, trimmed));
+    setTopics((prev) => [...new Set([...prev, trimmed])].sort());
+    setSelectedTopic(trimmed);
+    setIsAddTopicOpen(false);
+    setNewTopicName('');
+  }, [server]);
+
+  const handleRemoveCustomTopic = useCallback((topic: string) => {
+    setCustomTopics(removeCustomTopic(server, topic));
+
+    // Keep it if it still has tracked activity (published/received messages);
+    // otherwise it was a pure bookmark, so drop it from the list.
+    const stillTracked = subjectTracker.getSubjects().some((s) => s.subject === topic);
+    if (!stillTracked) {
+      setTopics((prev) => prev.filter((t) => t !== topic));
+      setSelectedTopic((prev) => (prev === topic ? null : prev));
+    }
+  }, [server]);
 
   // State for publish card collapsible behavior
   const [isPublishExpanded, setIsPublishExpanded] = useState(() => {
@@ -272,15 +316,17 @@ const MessagesComponent = function Messages() {
       const activity = subjectActivities.get(topic);
       const isSelected = selectedTopicRef === topic;
       const isSubscribed = subscriptionsRef.some(s => s.subject === topic && s.isActive);
+      const isCustom = customTopicsSet.has(topic);
 
       return {
         topic,
         activity,
         isSelected,
-        isSubscribed
+        isSubscribed,
+        isCustom
       };
     });
-  }, [topics, subjectActivities, selectedTopic, subscriptions, hideInboxTopics]);
+  }, [topics, subjectActivities, selectedTopic, subscriptions, hideInboxTopics, customTopicsSet]);
   
   // Memoized topic list component to prevent re-renders
   const TopicListMemoized = useMemo(() => {
@@ -305,7 +351,7 @@ const MessagesComponent = function Messages() {
         initial="hidden"
         animate="visible"
       >
-        {topicListData.map(({ topic, activity, isSelected, isSubscribed }) => {
+        {topicListData.map(({ topic, activity, isSelected, isSubscribed, isCustom }) => {
           return (
             <div
               key={topic}
@@ -316,20 +362,36 @@ const MessagesComponent = function Messages() {
             >
               <div className="flex items-center justify-between mb-1">
                 <span className="font-mono text-sm truncate">{topic}</span>
-                <AnimatePresence>
-                  {isSubscribed && (
-                    <motion.div
-                      initial={{ scale: 0, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      exit={{ scale: 0, opacity: 0 }}
-                      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                <div className="flex items-center gap-1 flex-shrink-0">
+                  <AnimatePresence>
+                    {isSubscribed && (
+                      <motion.div
+                        initial={{ scale: 0, opacity: 0 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        exit={{ scale: 0, opacity: 0 }}
+                        transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                      >
+                        <Badge variant="default" className="text-xs">
+                          Subscribed
+                        </Badge>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                  {isCustom && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-5 w-5 text-muted-foreground hover:text-destructive"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveCustomTopic(topic);
+                      }}
+                      title="Remove custom topic"
                     >
-                      <Badge variant="default" className="text-xs">
-                        Subscribed
-                      </Badge>
-                    </motion.div>
+                      <X className="h-3 w-3" />
+                    </Button>
                   )}
-                </AnimatePresence>
+                </div>
               </div>
               {activity && (
                 <div className="flex items-center gap-2 text-xs text-muted-foreground">
@@ -343,7 +405,7 @@ const MessagesComponent = function Messages() {
         })}
       </motion.div>
     );
-  }, [topics, topicListData, isLoadingTopics, setSelectedTopic]);
+  }, [topics, topicListData, isLoadingTopics, setSelectedTopic, handleRemoveCustomTopic]);
 
   const publishForm = useForm<PublishFormData>({
     resolver: zodResolver(publishSchema),
@@ -568,7 +630,7 @@ const MessagesComponent = function Messages() {
       ]);
       
       // Combine and deduplicate using Set for optimal performance
-      const allTopicsSet = new Set([...serverTopicsSet, ...subjectTrackerTopics]);
+      const allTopicsSet = new Set([...serverTopicsSet, ...subjectTrackerTopics, ...customTopicsRef.current]);
       const newTopics = Array.from(allTopicsSet).sort();
       
       // Smart comparison using hash to prevent unnecessary re-renders
@@ -599,7 +661,7 @@ const MessagesComponent = function Messages() {
       try {
         const serverTopicsSet = await fetchServerTopics();
         const subjectTrackerTopics = subjectTracker.getSubjects().map(s => s.subject);
-        const allTopicsSet = new Set([...serverTopicsSet, ...subjectTrackerTopics]);
+        const allTopicsSet = new Set([...serverTopicsSet, ...subjectTrackerTopics, ...customTopicsRef.current]);
         const newTopics = Array.from(allTopicsSet).sort();
         const newHash = createTopicsHash(newTopics);
         
@@ -671,7 +733,7 @@ const MessagesComponent = function Messages() {
           // Get fresh subject tracker topics and combine with cached server topics
           const subjectTrackerTopics = subjectTracker.getSubjects().map(s => s.subject);
           const serverTopicsSet = serverTopicsCache.current.topics;
-          const allTopicsSet = new Set([...serverTopicsSet, ...subjectTrackerTopics]);
+          const allTopicsSet = new Set([...serverTopicsSet, ...subjectTrackerTopics, ...customTopicsRef.current]);
           const newTopics = Array.from(allTopicsSet).sort();
           const newHash = createTopicsHash(newTopics);
           
@@ -753,7 +815,7 @@ const MessagesComponent = function Messages() {
                         const subjectTrackerTopics = subjectTracker.getSubjects().map(s => s.subject);
 
                         // Combine and update
-                        const allTopicsSet = new Set([...freshServerTopics, ...subjectTrackerTopics]);
+                        const allTopicsSet = new Set([...freshServerTopics, ...subjectTrackerTopics, ...customTopicsRef.current]);
                         const newTopics = Array.from(allTopicsSet).sort();
                         setTopics(newTopics);
 
@@ -1062,11 +1124,8 @@ const MessagesComponent = function Messages() {
                 value={newTopicName}
                 onChange={(e) => setNewTopicName(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && newTopicName.trim()) {
-                    setTopics(prev => [...new Set([...prev, newTopicName.trim()])].sort());
-                    setSelectedTopic(newTopicName.trim());
-                    setIsAddTopicOpen(false);
-                    setNewTopicName('');
+                  if (e.key === 'Enter') {
+                    handleAddCustomTopic(newTopicName);
                   }
                 }}
               />
@@ -1083,14 +1142,7 @@ const MessagesComponent = function Messages() {
               Cancel
             </Button>
             <Button
-              onClick={() => {
-                if (newTopicName.trim()) {
-                  setTopics(prev => [...new Set([...prev, newTopicName.trim()])].sort());
-                  setSelectedTopic(newTopicName.trim());
-                  setIsAddTopicOpen(false);
-                  setNewTopicName('');
-                }
-              }}
+              onClick={() => handleAddCustomTopic(newTopicName)}
               disabled={!newTopicName.trim()}
             >
               Add Topic
