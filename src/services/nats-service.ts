@@ -3,6 +3,19 @@ import { toast } from 'sonner';
 import { subjectTracker } from './subject-tracker';
 import { config } from '../config';
 
+// Base URL for the NATS HTTP monitoring API. Defaults to the build-time value
+// but is overridden at runtime with the httpUrl the user configures in Settings.
+let monitoringBaseUrl: string = config.nats.httpUrl;
+
+export function setMonitoringUrl(url?: string): void {
+  const trimmed = url?.trim();
+  monitoringBaseUrl = trimmed ? trimmed.replace(/\/+$/, '') : config.nats.httpUrl;
+}
+
+function monitoringApi(path: string): string {
+  return `${monitoringBaseUrl}${path}`;
+}
+
 export interface NatsService {
   publish: (subject: string, data: unknown, headers?: Record<string, string>) => Promise<void>;
   subscribe: (subject: string, callback: (msg: { subject: string; data: unknown; headers?: Record<string, string>; timestamp: number; reply?: string }) => void) => Promise<() => void>;
@@ -114,12 +127,20 @@ class RealNatsService implements NatsService {
   }
 }
 
-export async function createNatsService(servers: string[]): Promise<NatsService> {
+export async function createNatsService(
+  servers: string[],
+  auth?: { user?: string; pass?: string; token?: string },
+): Promise<NatsService> {
   try {
     const connection = await wsconnect({
       servers,
       timeout: 10000,
       name: 'NATS UI Client',
+      ...(auth?.token
+        ? { token: auth.token }
+        : auth?.user || auth?.pass
+          ? { user: auth.user, pass: auth.pass }
+          : {}),
     });
     return new RealNatsService(connection);
     
@@ -133,7 +154,7 @@ export async function createNatsService(servers: string[]): Promise<NatsService>
 // Utility functions for NATS monitoring API
 export async function fetchNatsInfo(): Promise<Record<string, unknown> | null> {
   try {
-    const response = await fetch(`${config.nats.httpUrl}/varz`);
+    const response = await fetch(monitoringApi('/varz'));
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return await response.json();
   } catch (error) {
@@ -144,7 +165,7 @@ export async function fetchNatsInfo(): Promise<Record<string, unknown> | null> {
 
 export async function fetchNatsConnections(): Promise<Record<string, unknown> | null> {
   try {
-    const response = await fetch(`${config.nats.httpUrl}/connz`);
+    const response = await fetch(monitoringApi('/connz'));
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return await response.json();
   } catch (error) {
@@ -155,7 +176,7 @@ export async function fetchNatsConnections(): Promise<Record<string, unknown> | 
 
 export async function fetchJetStreamInfo(): Promise<Record<string, unknown> | null> {
   try {
-    const response = await fetch(`${config.nats.httpUrl}/jsz`);
+    const response = await fetch(monitoringApi('/jsz'));
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     return await response.json();
   } catch (error) {
@@ -166,7 +187,7 @@ export async function fetchJetStreamInfo(): Promise<Record<string, unknown> | nu
 
 export async function fetchActiveSubjects(): Promise<string[]> {
   try {
-    const response = await fetch(`${config.nats.httpUrl}/connz?subs=1`);
+    const response = await fetch(monitoringApi('/connz?subs=1'));
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     
@@ -191,7 +212,7 @@ export async function fetchActiveSubjects(): Promise<string[]> {
 // JetStream Stream Management Functions
 export async function fetchJetStreamStreams(): Promise<Record<string, unknown>[]> {
   try {
-    const response = await fetch(`${config.nats.httpUrl}/jsz?streams=1`);
+    const response = await fetch(monitoringApi('/jsz?streams=1'));
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     
@@ -204,7 +225,7 @@ export async function fetchJetStreamStreams(): Promise<Record<string, unknown>[]
 
 export async function fetchJetStreamStreamInfo(streamName: string): Promise<Record<string, unknown> | null> {
   try {
-    const response = await fetch(`${config.nats.httpUrl}/jsz?stream=${streamName}`);
+    const response = await fetch(monitoringApi(`/jsz?stream=${streamName}`));
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     
@@ -554,7 +575,7 @@ export class JetStreamManager {
 // Fetch all consumers across all streams
 export async function fetchAllConsumers(): Promise<Record<string, unknown>[]> {
   try {
-    const response = await fetch(`${config.nats.httpUrl}/jsz?consumers=1`);
+    const response = await fetch(monitoringApi('/jsz?consumers=1'));
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
     

@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, type ReactNode } from 'react';
 import { toast } from 'sonner';
-import { createNatsService } from '@/services/nats-service';
+import { createNatsService, setMonitoringUrl } from '@/services/nats-service';
 import { config } from '@/config';
 import { NatsContext, type ConnectionConfig, type ConnectionStatus, type NatsContextType } from './nats-context';
 
@@ -48,8 +48,13 @@ export function NatsProvider({ children }: NatsProviderProps) {
     setError(null);
 
     try {
-      const service = await createNatsService([config.server]);
+      const service = await createNatsService([config.server], {
+        user: config.user,
+        pass: config.pass,
+        token: config.token,
+      });
 
+      setMonitoringUrl(config.httpUrl);
       setConnection(service);
       setStatus('connected');
       setConnectionConfig(config);
@@ -94,6 +99,12 @@ export function NatsProvider({ children }: NatsProviderProps) {
       console.error('Failed to store updated config:', error);
     }
   }, [connectionConfig]);
+
+  // Keep the monitoring API base URL in sync with the configured HTTP URL, so
+  // data fetches (streams, consumers, monitoring) target the right server.
+  useEffect(() => {
+    setMonitoringUrl(connectionConfig.httpUrl);
+  }, [connectionConfig.httpUrl]);
 
   // Auto-connect functionality
   useEffect(() => {
