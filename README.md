@@ -149,7 +149,7 @@ NATS UI requires **3 ports** from your NATS server:
 | **8222** | HTTP monitoring API | ✅ |
 | **9222** | WebSocket for real-time | ✅ |
 
-The UI will auto-connect to `localhost` by default. To connect to a different server, use the Settings page in the app.
+By default the UI auto-connects to the host that served it (ports `9222` and `8222` on that same host), so the container works as-is whether you open it locally or from another machine. To connect to a different server, use the Settings page in the app.
 
 ## Requirements
 

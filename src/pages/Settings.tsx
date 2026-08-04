@@ -275,7 +275,7 @@ export function Settings() {
                                 <Label htmlFor="server">WebSocket Server URL</Label>
                                 <Input
                                     id="server"
-                                    placeholder="ws://localhost:9222"
+                                    placeholder={defaultConfig.nats.wsUrl}
                                     autoComplete="off"
                                     data-form-type="other"
                                     {...form.register('server')}
@@ -294,7 +294,7 @@ export function Settings() {
                                 <Label htmlFor="httpUrl">HTTP Monitoring URL</Label>
                                 <Input
                                     id="httpUrl"
-                                    placeholder="http://localhost:8222"
+                                    placeholder={defaultConfig.nats.httpUrl}
                                     autoComplete="off"
                                     data-form-type="other"
                                     {...form.register('httpUrl')}
