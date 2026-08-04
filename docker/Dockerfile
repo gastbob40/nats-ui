@@ -1,5 +1,9 @@
 # Multi-stage build for NATS UI
-FROM node:24-alpine AS builder
+# The bundle this stage produces is static and architecture-independent, so pin
+# the stage to the builder's own platform. Emulating Node to build the linux/arm64
+# image crashes QEMU with an illegal instruction, and was already an order of
+# magnitude slower than a native build when it did survive.
+FROM --platform=$BUILDPLATFORM node:24-alpine AS builder
 
 # Install pnpm
 RUN corepack enable && corepack prepare pnpm@latest --activate
