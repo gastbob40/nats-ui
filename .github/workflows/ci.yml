@@ -127,8 +127,14 @@ jobs:
           context: .
           file: ./docker/Dockerfile
           platforms: linux/amd64,linux/arm64
+          # Without this the image is built, tagged and then discarded: no
+          # release since v0.1.1 ever reached ghcr.
+          push: true
           cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # A failing cache export must not fail the release; the Actions cache
+          # service answered "error writing layer blob: not_found" and took the
+          # whole publish down with it.
+          cache-to: type=gha,mode=max,ignore-error=true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:v${{ steps.package-version.outputs.VERSION }}
