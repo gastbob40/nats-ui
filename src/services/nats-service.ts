@@ -1,5 +1,4 @@
 import { wsconnect, type NatsConnection, headers as createHeaders, type MsgHdrs } from '@nats-io/nats-core';
-import { toast } from 'sonner';
 import { subjectTracker } from './subject-tracker';
 import { config } from '../config';
 
@@ -145,8 +144,9 @@ export async function createNatsService(
     return new RealNatsService(connection);
     
   } catch (error) {
+    // Log the raw error here, but leave the user-facing message to NatsContext:
+    // toasting in both places fired two notifications for a single failure.
     console.error('Failed to connect to NATS server:', error);
-    toast.error(`Connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     throw error;
   }
 }

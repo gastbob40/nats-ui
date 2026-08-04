@@ -4,6 +4,16 @@ import { createNatsService, setMonitoringUrl } from '@/services/nats-service';
 import { config } from '@/config';
 import { NatsContext, type ConnectionConfig, type ConnectionStatus, type NatsContextType } from './nats-context';
 
+// nats-core rejects with a ConnectionError whose `message` is empty, because the
+// browser WebSocket API never reveals why a handshake failed. Reported as-is it
+// renders as "Failed to connect:" with nothing after it, so say what an empty
+// failure actually means in practice.
+const describeConnectionError = (error: unknown): string => {
+  if (error instanceof Error && error.message) return error.message;
+  if (typeof error === 'string' && error.trim()) return error;
+  return 'no WebSocket server answered (check the host, port and ws/wss scheme)';
+};
+
 const getStoredConfig = (): ConnectionConfig => {
   // Default configuration from config file
   const defaultConfig: ConnectionConfig = {
@@ -68,10 +78,12 @@ export function NatsProvider({ children }: NatsProviderProps) {
 
       toast.success('Connected to NATS server');
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      setError(errorMessage);
+      const reason = describeConnectionError(error);
+      // Always name the URL that was tried: the default now follows whichever
+      // host served the UI, so it is not necessarily the one the user expects.
+      setError(`${config.server} — ${reason}`);
       setStatus('error');
-      toast.error(`Failed to connect: ${errorMessage}`);
+      toast.error(`Failed to connect to ${config.server}`, { description: reason });
       throw error;
     }
   }, [status]);
