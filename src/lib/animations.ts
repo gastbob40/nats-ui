@@ -1,5 +1,5 @@
 /**
- * Framer Motion animation variants and utilities
+ * Motion animation variants and utilities
  * Following Material Design motion principles and industry best practices
  *
  * Duration guidelines:
@@ -13,7 +13,7 @@
  * - Standard (ease-in-out): Moving between positions - [0.4, 0.0, 0.2, 1]
  */
 
-import { type Variants, type Transition } from 'framer-motion';
+import { type Variants, type Transition } from 'motion/react';
 
 /**
  * Standard easing curves from Material Design

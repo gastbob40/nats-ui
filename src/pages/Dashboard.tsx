@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { motion, useSpring, useTransform } from 'framer-motion';
+import { motion, useSpring, useTransform } from 'motion/react';
 import {
   Activity,
   Database,
