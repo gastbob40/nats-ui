@@ -6,7 +6,8 @@
     "group:allNonMajor"
   ],
   "timezone": "Europe/Paris",
-  "schedule": ["before 6am on monday"],
+  "schedule": ["on monday"],
+  "minimumReleaseAge": "25 hours",
   "lockFileMaintenance": { "enabled": true },
   "packageRules": [
     {
