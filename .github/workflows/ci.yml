@@ -101,6 +101,16 @@ jobs:
       - name: Run tests
         run: pnpm test --if-present
 
+      # Lint and tsc prove the bundle compiles, not that it still renders.
+      # Keep it so a dependency PR can be served locally before it merges.
+      - name: Upload the built bundle for review
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v7
+        with:
+          name: dist-pr-${{ github.event.pull_request.number }}
+          path: dist/
+          retention-days: 7
+
       - name: Use version from check
         id: package-version
         run: |
