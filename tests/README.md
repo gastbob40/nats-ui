@@ -25,7 +25,7 @@ Script qui crée plusieurs consumers JetStream pour tester différentes configur
 
 ### Prérequis
 1. Serveur NATS **avec JetStream** activé : `nats-server -js -p 4222`
-2. Package NATS installé : `npm install nats`
+2. Dépendances installées depuis la racine du projet : `pnpm install` (les scripts utilisent `@nats-io/transport-node` et `@nats-io/jetstream`)
 
 ### Configuration initiale
 

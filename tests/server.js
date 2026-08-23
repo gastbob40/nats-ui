@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { connect, StringCodec, headers } from 'nats';
+import { connect, headers } from '@nats-io/transport-node';
 
 async function server() {
   try {
@@ -13,7 +13,6 @@ async function server() {
     console.log('✅ NATS Server connected');
     console.log('📡 Publishing messages to users.new and users.update every 2 seconds...');
 
-    const sc = StringCodec();
     let counter = 1;
 
     // Publish messages periodically
@@ -99,7 +98,7 @@ async function server() {
       newUserHeaders.set('X-User-ID', counter.toString());
       newUserHeaders.set('X-Timestamp', new Date().toISOString());
 
-      nc.publish('users.new', sc.encode(JSON.stringify(newUser)), { headers: newUserHeaders });
+      nc.publish('users.new', JSON.stringify(newUser), { headers: newUserHeaders });
       console.log(`📤 Published to users.new with headers:`, newUser);
 
       // Publish to users.update (every other iteration)
@@ -205,7 +204,7 @@ async function server() {
         updateHeaders.set('X-Previous-Version', (counter - 2).toString());
         updateHeaders.set('X-Timestamp', new Date().toISOString());
 
-        nc.publish('users.update', sc.encode(JSON.stringify(updateUser)), { headers: updateHeaders });
+        nc.publish('users.update', JSON.stringify(updateUser), { headers: updateHeaders });
         console.log(`📤 Published to users.update with headers:`, updateUser);
       }
 

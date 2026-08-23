@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { connect } from 'nats';
+import { connect } from '@nats-io/transport-node';
 
 async function createSimpleConsumers() {
   try {
@@ -45,7 +45,7 @@ async function createSimpleConsumers() {
           { timeout: 5000 }
         );
 
-        const result = JSON.parse(new TextDecoder().decode(response.data));
+        const result = response.json();
         
         if (result.error) {
           if (result.error.description?.includes('already exists') || 

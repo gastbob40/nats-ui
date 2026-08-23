@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-import { connect } from 'nats';
+import { connect } from '@nats-io/transport-node';
+import { jetstream } from '@nats-io/jetstream';
 
 async function listenUserAnalytics() {
   try {
@@ -17,7 +18,7 @@ async function listenUserAnalytics() {
     console.log('---');
 
     // Get JetStream context
-    const js = nc.jetstream();
+    const js = jetstream(nc);
 
     try {
       // Get the consumer
@@ -36,7 +37,7 @@ async function listenUserAnalytics() {
         
         console.log(`📨 Message #${messageCount} received:`);
         console.log(`   ├─ Subject: ${m.subject}`);
-        console.log(`   ├─ Data: ${new TextDecoder().decode(m.data)}`);
+        console.log(`   ├─ Data: ${m.string()}`);
         console.log(`   ├─ Timestamp: ${new Date().toISOString()}`);
         
         // Check for headers

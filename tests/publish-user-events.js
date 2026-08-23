@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { connect } from 'nats';
+import { connect } from '@nats-io/transport-node';
 
 async function publishUserEvents() {
   try {

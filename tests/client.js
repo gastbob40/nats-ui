@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { connect, StringCodec } from 'nats';
+import { connect } from '@nats-io/transport-node';
 
 async function client() {
   try {
@@ -13,8 +13,6 @@ async function client() {
     console.log('✅ NATS Client connected');
     console.log('👂 Listening to users.new and users.update...\n');
 
-    const sc = StringCodec();
-    
     // Message counters
     let newCount = 0;
     let updateCount = 0;
@@ -24,7 +22,7 @@ async function client() {
     (async () => {
       for await (const msg of newSub) {
         try {
-          const data = JSON.parse(sc.decode(msg.data));
+          const data = msg.json();
           newCount++;
           console.log(`🆕 [users.new #${newCount}] Received:`, data);
         } catch (error) {
@@ -38,7 +36,7 @@ async function client() {
     (async () => {
       for await (const msg of updateSub) {
         try {
-          const data = JSON.parse(sc.decode(msg.data));
+          const data = msg.json();
           updateCount++;
           console.log(`🔄 [users.update #${updateCount}] Received:`, data);
         } catch (error) {

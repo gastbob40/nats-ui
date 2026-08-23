@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { connect, StringCodec } from 'nats';
+import { connect } from '@nats-io/transport-node';
 
 async function createUsersStream() {
   try {
@@ -33,7 +33,7 @@ async function createUsersStream() {
       { timeout: 5000 }
     );
 
-    const result = JSON.parse(new TextDecoder().decode(response.data));
+    const result = response.json();
     
     if (result.error) {
       console.error('❌ Failed to create stream:', result.error);

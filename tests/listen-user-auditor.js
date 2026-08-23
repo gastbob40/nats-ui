@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-import { connect } from 'nats';
+import { connect } from '@nats-io/transport-node';
+import { jetstreamManager } from '@nats-io/jetstream';
 
 async function listenUserAuditor() {
   try {
@@ -19,12 +20,11 @@ async function listenUserAuditor() {
     console.log('💡 Publish messages to "users.*" to see them here');
     console.log('---');
 
-    // Get JetStream context
-    const js = nc.jetstream();
+    // Get JetStream manager
+    const jsm = await jetstreamManager(nc);
 
     try {
       // Get the consumer to verify it exists and get its configuration
-      const jsm = await js.jetstreamManager();
       let consumerInfo;
       try {
         consumerInfo = await jsm.consumers.info('USERS', 'user-auditor');
@@ -65,7 +65,7 @@ async function listenUserAuditor() {
         // Parse and display the data
         let userData;
         try {
-          userData = JSON.parse(new TextDecoder().decode(m.data));
+          userData = m.json();
           console.log(`   ├─ User ID: ${userData.id || 'N/A'}`);
           console.log(`   ├─ User Action: ${userData.action || 'N/A'}`);
           console.log(`   ├─ User Email: ${userData.email || 'N/A'}`);
@@ -73,7 +73,7 @@ async function listenUserAuditor() {
             console.log(`   ├─ Company: ${userData.profile.professional.company}`);
           }
         } catch (e) {
-          console.log(`   ├─ Raw Data: ${new TextDecoder().decode(m.data).substring(0, 100)}...`);
+          console.log(`   ├─ Raw Data: ${m.string().substring(0, 100)}...`);
         }
         
         // Check for headers

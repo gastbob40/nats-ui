@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-import { connect } from 'nats';
+import { connect } from '@nats-io/transport-node';
+import { jetstream } from '@nats-io/jetstream';
 
 async function listenUserProcessor() {
   try {
@@ -20,7 +21,7 @@ async function listenUserProcessor() {
     console.log('---');
 
     // Get JetStream context
-    const js = nc.jetstream();
+    const js = jetstream(nc);
 
     try {
       // Get the consumer using the pull approach (like user-analytics)
@@ -52,7 +53,7 @@ async function listenUserProcessor() {
         // Parse and display the data
         let userData;
         try {
-          userData = JSON.parse(new TextDecoder().decode(m.data));
+          userData = m.json();
           console.log(`   ├─ User ID: ${userData.id || 'N/A'}`);
           console.log(`   ├─ User Action: ${userData.action || userData.username || 'N/A'}`);
           console.log(`   ├─ User Email: ${userData.email || 'N/A'}`);
@@ -60,7 +61,7 @@ async function listenUserProcessor() {
             console.log(`   ├─ Plan: ${userData.plan}`);
           }
         } catch (e) {
-          console.log(`   ├─ Raw Data: ${new TextDecoder().decode(m.data).substring(0, 100)}...`);
+          console.log(`   ├─ Raw Data: ${m.string().substring(0, 100)}...`);
         }
         
         // Check for headers

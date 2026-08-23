@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
-import { connect } from 'nats';
+import { connect } from '@nats-io/transport-node';
+import { jetstreamManager } from '@nats-io/jetstream';
 
 async function deleteConsumer() {
   try {
@@ -13,9 +14,8 @@ async function deleteConsumer() {
     console.log('✅ NATS connected');
     console.log('🗑️  Deleting user-processor consumer...');
 
-    // Get JetStream context
-    const js = nc.jetstream();
-    const jsm = await js.jetstreamManager();
+    // Get JetStream manager
+    const jsm = await jetstreamManager(nc);
 
     try {
       await jsm.consumers.delete('USERS', 'user-processor');
