@@ -29,6 +29,64 @@ export async function createDurableConsumer(nc: NatsConnection, stream: string, 
   }
 }
 
+/** Sends a raw JetStream API request and returns the parsed response. */
+export async function jsApiRequest(
+  nc: NatsConnection,
+  subject: string,
+  payload: Record<string, unknown> = {},
+): Promise<Record<string, unknown>> {
+  const response = await nc.request(subject, JSON.stringify(payload), { timeout: 5000 });
+  return JSON.parse(new TextDecoder().decode(response.data));
+}
+
+export async function createStreamRaw(
+  nc: NatsConnection,
+  name: string,
+  subjects: string[],
+  extra: Record<string, unknown> = {},
+): Promise<Record<string, unknown>> {
+  const result = await jsApiRequest(nc, `$JS.API.STREAM.CREATE.${name}`, {
+    name,
+    subjects,
+    retention: 'limits',
+    storage: 'memory',
+    max_msgs: 10000,
+    num_replicas: 1,
+    ...extra,
+  });
+  const error = result.error as { description?: string } | undefined;
+  if (error) {
+    throw new Error(`Failed to create stream ${name}: ${error.description}`);
+  }
+  return result;
+}
+
+/** Returns the stream info envelope; contains .error when the stream is missing. */
+export async function getStreamInfoRaw(nc: NatsConnection, name: string): Promise<Record<string, unknown>> {
+  return jsApiRequest(nc, `$JS.API.STREAM.INFO.${name}`);
+}
+
+/** Best-effort stream deletion for test cleanup. */
+export async function deleteStreamRaw(nc: NatsConnection, name: string): Promise<void> {
+  await jsApiRequest(nc, `$JS.API.STREAM.DELETE.${name}`).catch(() => {});
+}
+
+/** Creates a KV bucket the same way the KV client does (KV_-prefixed stream). */
+export async function createKVBucketRaw(nc: NatsConnection, bucket: string): Promise<void> {
+  await createStreamRaw(nc, `KV_${bucket}`, [`$KV.${bucket}.>`], {
+    max_msgs_per_subject: 1,
+    allow_direct: true,
+    allow_rollup_hdrs: true,
+    discard: 'new',
+    storage: 'file',
+  });
+}
+
+export async function putKVRaw(nc: NatsConnection, bucket: string, key: string, value: string): Promise<void> {
+  nc.publish(`$KV.${bucket}.${key}`, value);
+  await nc.flush();
+}
+
 let counter = 0;
 
 /** Unique resource name so parallel tests never collide on the shared server. */

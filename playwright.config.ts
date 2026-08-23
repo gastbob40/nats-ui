@@ -11,6 +11,9 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 2 : 0,
+  // Real NATS + JetStream round-trips under parallel workers can exceed the
+  // 5s default.
+  expect: { timeout: 10_000 },
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: {
     baseURL: PREVIEW_URL,
@@ -19,7 +22,13 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: {
+        ...devices['Desktop Chrome'],
+        // Taller than the device default (720): the KV page stacks stats,
+        // bucket chips and the table without a page scrollbar, so rows
+        // below the fold would be unreachable for the click actions.
+        viewport: { width: 1280, height: 1400 },
+      },
     },
   ],
   webServer: {
