@@ -50,9 +50,59 @@ jobs:
             fi
           fi
 
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v6
+        with:
+          version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Start NATS test servers
+        run: pnpm test:env
+
+      - name: Run unit and integration tests with coverage
+        run: pnpm test:coverage
+
+      - name: Get Playwright version
+        id: playwright-version
+        run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> $GITHUB_OUTPUT
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install Playwright Chromium
+        run: pnpm exec playwright install --with-deps chromium
+
+      - name: Run end-to-end tests
+        run: pnpm test:e2e
+
+      - name: Upload Playwright report on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7
+
   build:
     runs-on: ubuntu-latest
-    needs: check-version
+    needs: [check-version, test]
     permissions:
       contents: write
       packages: write
@@ -97,9 +147,6 @@ jobs:
 
       - name: Build application
         run: pnpm build
-
-      - name: Run tests
-        run: pnpm test --if-present
 
       # Lint and tsc prove the bundle compiles, not that it still renders.
       # Keep it so a dependency PR can be served locally before it merges.

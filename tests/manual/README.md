@@ -31,7 +31,7 @@ Script qui crée plusieurs consumers JetStream pour tester différentes configur
 
 **Créer le stream JetStream (une seule fois) :**
 ```bash
-cd tests
+cd tests/manual
 node create-stream.js
 ```
 
@@ -39,7 +39,7 @@ Cela créera un stream "USERS" qui capturera tous les messages `users.*` dans Je
 
 **Créer les consumers JetStream (optionnel) :**
 ```bash
-cd tests
+cd tests/manual
 node create-consumers.js
 ```
 
@@ -49,13 +49,13 @@ Cela créera 3 consumers différents pour tester diverses configurations JetStre
 
 **Terminal 1 - Serveur :**
 ```bash
-cd tests
+cd tests/manual
 node server.js
 ```
 
 **Terminal 2 - Client :**
 ```bash
-cd tests
+cd tests/manual
 node client.js
 ```
 
