@@ -1,5 +1,5 @@
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { useTheme } from 'next-themes';
 import {
   Database,
@@ -12,7 +12,7 @@ import {
   Sun,
   Monitor,
 } from 'lucide-react';
-import { iconSpring } from '@/lib/animations';
+import { pageEnter, swapSpring, easings } from '@/lib/animations';
 
 // GitHub brand icon (removed from lucide-react v1)
 function Github({ className }: { className?: string }) {
@@ -168,26 +168,16 @@ export function MainLayout() {
           <SidebarHeader className="border-b border-sidebar-border">
             <div className="flex items-center gap-2 px-4 py-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:px-2">
               <div className="flex items-center gap-2">
-                <motion.div
-                  className="rounded-lg bg-primary p-2"
-                  whileHover={{ scale: 1.05, rotate: 3 }}
-                  transition={iconSpring}
-                >
+                <div className="rounded-lg bg-primary p-2">
                   <Database className="h-4 w-4 text-primary-foreground" />
-                </motion.div>
+                </div>
                 <div className="flex flex-col group-data-[collapsible=icon]:hidden">
                   <h1 className="text-sm font-semibold">NATS UI</h1>
                   <div className="flex items-center gap-2">
-                    <motion.div
-                      className={`h-2 w-2 rounded-full ${getStatusColor(status)}`}
-                      animate={status === 'connected' ? {
-                        scale: [1, 1.1, 1],
-                        transition: {
-                          duration: 2,
-                          repeat: Infinity,
-                          ease: [0.4, 0.0, 0.2, 1]
-                        }
-                      } : {}}
+                    <div
+                      className={`h-2 w-2 rounded-full ${getStatusColor(status)} ${
+                        status === 'connected' ? 'status-pulse' : ''
+                      }`}
                     />
                     <span className="text-xs text-muted-foreground">
                       {getStatusText(status)}
@@ -214,20 +204,10 @@ export function MainLayout() {
                           isActive={isActive}
                           tooltip={item.title}
                         >
-                          <motion.div whileHover="hover" className="flex items-center gap-2">
-                            <Link to={item.path} className="flex items-center gap-2 w-full">
-                              <motion.div
-                                variants={{
-                                  hover: { scale: 1.1, rotate: 3 }
-                                }}
-                                transition={iconSpring}
-                                className="flex items-center justify-center"
-                              >
-                                <Icon className="h-4 w-4" />
-                              </motion.div>
-                              <span>{item.title}</span>
-                            </Link>
-                          </motion.div>
+                          <Link to={item.path} className="flex items-center gap-2">
+                            <Icon className="h-4 w-4" />
+                            <span>{item.title}</span>
+                          </Link>
                         </SidebarMenuButton>
                       </SidebarMenuItem>
                     );
@@ -250,12 +230,7 @@ export function MainLayout() {
                   className="h-8 w-8"
                   title="View on GitHub"
                 >
-                  <motion.div
-                    whileHover={{ scale: 1.1, rotate: 3 }}
-                    transition={iconSpring}
-                  >
-                    <Github className="h-4 w-4" />
-                  </motion.div>
+                  <Github className="h-4 w-4" />
                   <span className="sr-only">View on GitHub</span>
                 </Button>
                 <Button
@@ -265,15 +240,23 @@ export function MainLayout() {
                   className="h-8 w-8"
                   title={getThemeTooltip()}
                 >
-                  <motion.div
-                    key={theme}
-                    initial={{ rotate: -180, opacity: 0 }}
-                    animate={{ rotate: 0, opacity: 1 }}
-                    exit={{ rotate: 180, opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    {getThemeIcon()}
-                  </motion.div>
+                  <AnimatePresence mode="wait" initial={false}>
+                    <motion.span
+                      key={theme}
+                      initial={{ opacity: 0, rotate: -90, scale: 0.8 }}
+                      animate={{ opacity: 1, rotate: 0, scale: 1 }}
+                      exit={{
+                        opacity: 0,
+                        rotate: 90,
+                        scale: 0.8,
+                        transition: { duration: 0.12, ease: easings.easeOut },
+                      }}
+                      transition={swapSpring}
+                      className="flex items-center justify-center"
+                    >
+                      {getThemeIcon()}
+                    </motion.span>
+                  </AnimatePresence>
                   <span className="sr-only">Cycle theme</span>
                 </Button>
               </div>
@@ -331,7 +314,15 @@ export function MainLayout() {
           </header>
 
           <main className="flex-1 overflow-auto p-4">
-            <Outlet />
+            <motion.div
+              key={location.pathname}
+              variants={pageEnter}
+              initial="hidden"
+              animate="visible"
+              className="h-full"
+            >
+              <Outlet />
+            </motion.div>
           </main>
         </SidebarInset>
       </div>

@@ -219,7 +219,7 @@ function Sidebar({
       <div
         data-slot="sidebar-gap"
         className={cn(
-          "relative w-(--sidebar-width) bg-transparent transition-[width] duration-[250ms] ease-[cubic-bezier(0.0,0.0,0.2,1)]",
+          "relative w-(--sidebar-width) bg-transparent transition-[width] duration-200 ease-in-out-cubic",
           "group-data-[collapsible=offcanvas]:w-0",
           "group-data-[side=right]:rotate-180",
           variant === "floating" || variant === "inset"
@@ -230,7 +230,7 @@ function Sidebar({
       <div
         data-slot="sidebar-container"
         className={cn(
-          "fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-[250ms] ease-[cubic-bezier(0.0,0.0,0.2,1)] md:flex",
+          "fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-in-out-cubic md:flex",
           side === "left"
             ? "left-0 group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)]"
             : "right-0 group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)]",
@@ -279,8 +279,8 @@ function SidebarTrigger({
           rotate: state === "collapsed" ? 180 : 0
         }}
         transition={{
-          duration: 0.25,
-          ease: [0.0, 0.0, 0.2, 1]
+          duration: 0.2,
+          ease: [0.645, 0.045, 0.355, 1]
         }}
         className="flex items-center justify-center"
       >

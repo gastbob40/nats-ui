@@ -1,6 +1,7 @@
 import { BrowserRouter, HashRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from 'next-themes';
+import { MotionConfig } from 'motion/react';
 import { Toaster } from 'sonner';
 
 import { NatsProvider } from './contexts/NatsContext';
@@ -40,22 +41,25 @@ function App() {
     >
       <QueryClientProvider client={queryClient}>
         <NatsProvider>
-          <Router basename={basename}>
-            <div className="min-h-screen bg-background text-foreground">
-              <Routes>
-                <Route path="/" element={<MainLayout />}>
-                  <Route index element={<Dashboard />} />
-                  <Route path="messages" element={<Messages />} />
-                  <Route path="streams" element={<Streams />} />
-                  <Route path="consumers" element={<Consumers />} />
-                  <Route path="kv-store" element={<KVStore />} />
-                  <Route path="monitoring" element={<Monitoring />} />
-                  <Route path="settings" element={<Settings />} />
-                </Route>
-              </Routes>
-            </div>
-          </Router>
-          <Toaster 
+          {/* Reduced motion: transform/layout animations off, opacity kept */}
+          <MotionConfig reducedMotion="user">
+            <Router basename={basename}>
+              <div className="min-h-screen bg-background text-foreground">
+                <Routes>
+                  <Route path="/" element={<MainLayout />}>
+                    <Route index element={<Dashboard />} />
+                    <Route path="messages" element={<Messages />} />
+                    <Route path="streams" element={<Streams />} />
+                    <Route path="consumers" element={<Consumers />} />
+                    <Route path="kv-store" element={<KVStore />} />
+                    <Route path="monitoring" element={<Monitoring />} />
+                    <Route path="settings" element={<Settings />} />
+                  </Route>
+                </Routes>
+              </div>
+            </Router>
+          </MotionConfig>
+          <Toaster
             position="top-right" 
             expand={true} 
             richColors 

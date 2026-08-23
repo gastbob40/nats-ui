@@ -114,6 +114,16 @@
     --font-family-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
 }
 
+/*
+ * Motion easing tokens — strong asymmetric curves (animations.dev).
+ * Exposed both as ease-* utilities and as CSS variables.
+ */
+@theme {
+    --ease-out-expo: cubic-bezier(0.19, 1, 0.22, 1);
+    --ease-out-quad: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    --ease-in-out-cubic: cubic-bezier(0.645, 0.045, 0.355, 1);
+}
+
 @layer base {
     * {
         @apply border-border outline-ring/50;
@@ -123,12 +133,17 @@
     }
 }
 
-@keyframes spin-slow {
-    to {
-        transform: rotate(360deg);
+/* Breathing status indicator (opacity only — cheap, calm). */
+@keyframes status-pulse {
+    50% {
+        opacity: 0.4;
     }
 }
 
-.animate-spin-slow {
-    animation: spin-slow 20s linear infinite;
+@utility status-pulse {
+    animation: status-pulse 2s var(--ease-in-out-cubic) infinite;
+
+    @media (prefers-reduced-motion: reduce) {
+        animation: none;
+    }
 }

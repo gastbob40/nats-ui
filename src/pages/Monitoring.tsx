@@ -343,7 +343,7 @@ export function Monitoring() {
         </div>
         <div className="flex items-center gap-2">
           <Badge variant="default" className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
-            <div className="mr-1 h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+            <div className="mr-1 h-2 w-2 rounded-full bg-green-500 status-pulse" />
             Live Data
           </Badge>
         </div>

@@ -23,7 +23,7 @@ import {
 } from 'lucide-react';
 
 import {cn } from '@/lib/utils';
-import { staggerContainer } from '@/lib/animations';
+import { listItem, swapSpring, easings } from '@/lib/animations';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
@@ -102,10 +102,10 @@ const MessageItem = memo(({
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 20 }}
-      transition={{ duration: 0.3 }}
+      variants={listItem}
+      initial="hidden"
+      animate="visible"
+      exit="exit"
       className="rounded-lg border p-4 space-y-3"
     >
       <div className="flex items-center justify-between">
@@ -156,7 +156,7 @@ const MessageItem = memo(({
             <div className="flex items-center gap-1">
               <motion.div
                 animate={{ rotate: isHeaderExpanded ? 90 : 0 }}
-                transition={{ duration: 0.2 }}
+                transition={{ duration: 0.2, ease: easings.easeInOut }}
               >
                 <ChevronRight className="h-3 w-3" />
               </motion.div>
@@ -171,7 +171,7 @@ const MessageItem = memo(({
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
-                transition={{ duration: 0.2 }}
+                transition={{ duration: 0.25, ease: easings.easeOutHeight }}
                 className="overflow-hidden"
               >
                 <div className="mt-2 text-sm bg-muted p-2 rounded font-mono space-y-1">
@@ -345,12 +345,7 @@ const MessagesComponent = function Messages() {
     }
     
     return (
-      <motion.div
-        className="space-y-2"
-        variants={staggerContainer}
-        initial="hidden"
-        animate="visible"
-      >
+      <div className="space-y-2">
         {topicListData.map(({ topic, activity, isSelected, isSubscribed, isCustom }) => {
           return (
             <div
@@ -363,13 +358,17 @@ const MessagesComponent = function Messages() {
               <div className="flex items-center justify-between mb-1">
                 <span className="font-mono text-sm truncate">{topic}</span>
                 <div className="flex items-center gap-1 flex-shrink-0">
-                  <AnimatePresence>
+                  <AnimatePresence initial={false}>
                     {isSubscribed && (
                       <motion.div
-                        initial={{ scale: 0, opacity: 0 }}
+                        initial={{ scale: 0.8, opacity: 0 }}
                         animate={{ scale: 1, opacity: 1 }}
-                        exit={{ scale: 0, opacity: 0 }}
-                        transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                        exit={{
+                          scale: 0.9,
+                          opacity: 0,
+                          transition: { duration: 0.12, ease: easings.easeOut },
+                        }}
+                        transition={swapSpring}
                       >
                         <Badge variant="default" className="text-xs">
                           Subscribed
@@ -403,7 +402,7 @@ const MessagesComponent = function Messages() {
             </div>
           );
         })}
-      </motion.div>
+      </div>
     );
   }, [topics, topicListData, isLoadingTopics, setSelectedTopic, handleRemoveCustomTopic]);
 
@@ -1077,13 +1076,8 @@ const MessagesComponent = function Messages() {
                         </div>
                       </div>
                     ) : (
-                      <motion.div
-                        className="space-y-4"
-                        variants={staggerContainer}
-                        initial="hidden"
-                        animate="visible"
-                      >
-                        <AnimatePresence mode="popLayout">
+                      <div className="space-y-4">
+                        <AnimatePresence mode="popLayout" initial={false}>
                           {filteredMessages.map((message) => (
                             <MessageItem
                               key={message.id}
@@ -1096,7 +1090,7 @@ const MessagesComponent = function Messages() {
                             />
                           ))}
                         </AnimatePresence>
-                      </motion.div>
+                      </div>
                     )}
                   </div>
                 </CardContent>
