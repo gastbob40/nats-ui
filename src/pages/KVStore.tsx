@@ -378,7 +378,12 @@ export function KVStore() {
                     id="bucket-ttl"
                     type="number"
                     placeholder="Leave empty for no expiration"
-                    {...bucketForm.register('ttl', { valueAsNumber: true })}
+                    {...bucketForm.register('ttl', {
+                      // valueAsNumber turns an empty input into NaN, which
+                      // fails the optional-number validation and silently
+                      // blocks bucket creation without a TTL.
+                      setValueAs: (value) => (value === '' || value === null ? undefined : Number(value)),
+                    })}
                   />
                 </div>
 
@@ -580,6 +585,7 @@ export function KVStore() {
                         variant="ghost"
                         size="sm"
                         className="h-6 w-6 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
+                        title={`Delete bucket ${bucket}`}
                       >
                         <Trash2 className="h-3 w-3" />
                       </Button>
@@ -658,6 +664,7 @@ export function KVStore() {
                 size="sm"
                 onClick={handleExport}
                 disabled={filteredEntries.length === 0}
+                title="Export key-value data"
               >
                 <Download className="h-4 w-4" />
               </Button>
@@ -741,6 +748,7 @@ export function KVStore() {
                           variant="ghost"
                           size="sm"
                           onClick={() => handleEdit(entry)}
+                          title="Edit key"
                         >
                           <Edit3 className="h-4 w-4" />
                         </Button>
@@ -750,6 +758,7 @@ export function KVStore() {
                               variant="ghost"
                               size="sm"
                               className="text-red-600 hover:text-red-700"
+                              title="Delete key"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>

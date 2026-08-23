@@ -240,7 +240,9 @@ export function Streams() {
       // Check for common JetStream issues
       if (errorMessage.includes('JetStream not enabled')) {
         toast.error('JetStream is not enabled on the NATS server');
-      } else if (errorMessage.includes('already exists')) {
+      } else if (errorMessage.includes('already exists') || errorMessage.includes('already in use')) {
+        // The server reports name conflicts as "stream name already in use
+        // with a different configuration".
         toast.error(`Stream "${data.name}" already exists`);
       } else {
         toast.error(`Failed to create stream: ${errorMessage}`);
@@ -397,10 +399,19 @@ export function Streams() {
                       </div>
 
                       <div className="grid grid-cols-2 gap-4">
+                        {/* Radix selects are not native inputs: spreading
+                            form.register() onto them binds nothing, which
+                            left these stuck on their placeholder and made the
+                            hidden zod enum check reject every submission. */}
                         <div className="space-y-2">
                           <Label htmlFor="retention">Retention Policy</Label>
-                          <Select {...form.register('retention')}>
-                            <SelectTrigger>
+                          <Select
+                            value={form.watch('retention')}
+                            onValueChange={(value) =>
+                              form.setValue('retention', value as CreateStreamFormData['retention'])
+                            }
+                          >
+                            <SelectTrigger id="retention">
                               <SelectValue placeholder="Select retention" />
                             </SelectTrigger>
                             <SelectContent>
@@ -413,8 +424,13 @@ export function Streams() {
 
                         <div className="space-y-2">
                           <Label htmlFor="storage">Storage Type</Label>
-                          <Select {...form.register('storage')}>
-                            <SelectTrigger>
+                          <Select
+                            value={form.watch('storage')}
+                            onValueChange={(value) =>
+                              form.setValue('storage', value as CreateStreamFormData['storage'])
+                            }
+                          >
+                            <SelectTrigger id="storage">
                               <SelectValue placeholder="Select storage" />
                             </SelectTrigger>
                             <SelectContent>
@@ -596,6 +612,7 @@ export function Streams() {
                           variant="ghost"
                           size="sm"
                           onClick={() => selectStream(stream)}
+                          title="Stream details"
                         >
                           <Info className="h-4 w-4" />
                         </Button>
@@ -608,6 +625,7 @@ export function Streams() {
                               size="sm"
                               onClick={() => setStreamToDelete(stream.name)}
                               className="text-red-600 hover:text-red-700"
+                              title="Delete stream"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>

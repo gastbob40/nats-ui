@@ -993,6 +993,7 @@ const MessagesComponent = function Messages() {
                         toast.success('Messages exported successfully');
                       }}
                       disabled={filteredMessages.length === 0}
+                      title="Export messages"
                     >
                       <Download className="h-4 w-4" />
                     </Button>
@@ -1004,6 +1005,7 @@ const MessagesComponent = function Messages() {
                         toast.success('Messages cleared');
                       }}
                       disabled={filteredMessages.length === 0}
+                      title="Clear messages"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -1022,6 +1024,9 @@ const MessagesComponent = function Messages() {
                         }
                       }}
                       className="flex items-center justify-center"
+                      title={subscriptions.some(s => s.subject === selectedTopic && s.isActive)
+                        ? 'Unsubscribe from topic'
+                        : 'Subscribe to topic'}
                     >
                       {subscriptions.some(s => s.subject === selectedTopic && s.isActive) ? (
                         <Square className="h-4 w-4" />

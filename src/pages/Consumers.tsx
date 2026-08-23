@@ -337,6 +337,7 @@ export function Consumers() {
                             variant="ghost"
                             size="sm"
                             onClick={() => setSelectedConsumer(consumer)}
+                            title="Consumer details"
                           >
                             <Info className="h-4 w-4" />
                           </Button>
@@ -349,6 +350,7 @@ export function Consumers() {
                                 size="sm"
                                 onClick={() => setConsumerToDelete({name: consumer.name, stream: consumer.stream})}
                                 className="text-red-600 hover:text-red-700"
+                                title="Delete consumer"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
