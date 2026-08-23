@@ -1,0 +1,57 @@
+# Throwaway NATS servers for the automated test suites.
+# No volumes: state is wiped on every restart.
+#
+#   pnpm test:env        # start
+#   pnpm test:env:down   # stop
+#
+# The vitest/playwright global setups start and stop this compose file
+# automatically when nothing is already listening on the health ports.
+
+services:
+  nats:
+    image: nats:2-alpine
+    container_name: nats-ui-test
+    command: ["-c", "/etc/nats/nats.conf"]
+    ports:
+      - "4222:4222"   # NATS client connections
+      - "8222:8222"   # HTTP monitoring API
+      - "9222:9222"   # WebSocket connections
+    volumes:
+      - ./nats-test.conf:/etc/nats/nats.conf:ro
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8222/healthz"]
+      interval: 1s
+      timeout: 2s
+      retries: 30
+
+  nats-auth-user:
+    image: nats:2-alpine
+    container_name: nats-ui-test-auth-user
+    command: ["-c", "/etc/nats/nats.conf"]
+    ports:
+      - "4223:4222"
+      - "8223:8222"
+      - "9223:9222"
+    volumes:
+      - ./nats-test-auth-user.conf:/etc/nats/nats.conf:ro
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8222/healthz"]
+      interval: 1s
+      timeout: 2s
+      retries: 30
+
+  nats-auth-token:
+    image: nats:2-alpine
+    container_name: nats-ui-test-auth-token
+    command: ["-c", "/etc/nats/nats.conf"]
+    ports:
+      - "4224:4222"
+      - "8224:8222"
+      - "9224:9222"
+    volumes:
+      - ./nats-test-auth-token.conf:/etc/nats/nats.conf:ro
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8222/healthz"]
+      interval: 1s
+      timeout: 2s
+      retries: 30

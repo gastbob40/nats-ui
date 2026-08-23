@@ -25,3 +25,8 @@ dist-ssr
 
 # Claude Code project instructions
 CLAUDE.md
+
+# Test output
+coverage
+playwright-report
+test-results
