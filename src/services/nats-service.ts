@@ -212,27 +212,19 @@ export async function fetchActiveSubjects(): Promise<string[]> {
 // JetStream Stream Management Functions
 export async function fetchJetStreamStreams(): Promise<Record<string, unknown>[]> {
   try {
-    const response = await fetch(monitoringApi('/jsz?streams=1'));
+    const response = await fetch(monitoringApi('/jsz?streams=1&config=1'));
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
-    
-    return data.streams || [];
+
+    // /jsz reports `streams` as a count; the details live one level down,
+    // under account_details[].stream_detail.
+    const accounts: Record<string, unknown>[] = Array.isArray(data.account_details) ? data.account_details : [];
+    return accounts.flatMap((account) =>
+      Array.isArray(account.stream_detail) ? (account.stream_detail as Record<string, unknown>[]) : []
+    );
   } catch (error) {
     console.warn('Could not fetch JetStream streams:', error);
     return [];
-  }
-}
-
-export async function fetchJetStreamStreamInfo(streamName: string): Promise<Record<string, unknown> | null> {
-  try {
-    const response = await fetch(monitoringApi(`/jsz?stream=${streamName}`));
-    if (!response.ok) throw new Error(`HTTP ${response.status}`);
-    const data = await response.json();
-    
-    return data.stream_detail || null;
-  } catch (error) {
-    console.warn(`Could not fetch stream info for ${streamName}:`, error);
-    return null;
   }
 }
 
@@ -575,25 +567,31 @@ export class JetStreamManager {
 // Fetch all consumers across all streams
 export async function fetchAllConsumers(): Promise<Record<string, unknown>[]> {
   try {
-    const response = await fetch(monitoringApi('/jsz?consumers=1'));
+    const response = await fetch(monitoringApi('/jsz?consumers=1&config=1'));
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     const data = await response.json();
-    
+
+    // Consumers are nested under account_details[].stream_detail[].consumer_detail.
+    const accounts: Record<string, unknown>[] = Array.isArray(data.account_details) ? data.account_details : [];
     const consumers: Record<string, unknown>[] = [];
-    
-    if (data.streams) {
-      data.streams.forEach((stream: Record<string, unknown>) => {
-        if (stream.consumer_detail) {
-          (stream.consumer_detail as Record<string, unknown>[]).forEach((consumer: Record<string, unknown>) => {
-            consumers.push({
-              ...consumer,
-              stream_name: stream.name
-            });
+
+    for (const account of accounts) {
+      const streams = Array.isArray(account.stream_detail)
+        ? (account.stream_detail as Record<string, unknown>[])
+        : [];
+      for (const stream of streams) {
+        const details = Array.isArray(stream.consumer_detail)
+          ? (stream.consumer_detail as Record<string, unknown>[])
+          : [];
+        for (const consumer of details) {
+          consumers.push({
+            ...consumer,
+            stream_name: stream.name
           });
         }
-      });
+      }
     }
-    
+
     return consumers;
   } catch (error) {
     console.warn('Could not fetch consumers:', error);
